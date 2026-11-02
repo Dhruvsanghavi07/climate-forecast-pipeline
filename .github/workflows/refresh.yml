@@ -1,0 +1,39 @@
+name: Monthly refresh
+
+# Runs the whole pipeline against the live data on the 12th of every month (NOAA publishes the
+# previous month's Mauna Loa mean in the first days of the month) and publishes the dashboard to
+# GitHub Pages. Enable Pages with "Source: GitHub Actions" in the repository settings.
+on:
+  schedule:
+    - cron: "17 6 12 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install .
+      - name: Run pipeline
+        run: climate-pipeline --out site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
